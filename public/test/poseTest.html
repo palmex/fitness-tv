@@ -1,0 +1,286 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Pose Detection Tests</title>
+</head>
+<body>
+    <div id="results"></div>
+    <canvas id="testCanvas"></canvas>
+    
+    <script type="module">
+        import {
+            PoseLandmarker,
+            FilesetResolver,
+            DrawingUtils
+        } from "https://cdn.skypack.dev/@mediapipe/tasks-vision@0.10.0";
+        // import { analyzePose } from "../../src/functions/usePoseAnalysis";
+        import {detectPoseType, checkInFrame, isPose, isReverseWarrior, isTree, isCobra} from "../../src/functions/poseProcessing";
+        // async function analyzePose(landmarks) {
+        //     if (!landmarks?.length) return { error: "No landmarks detected" };
+            
+        //     const pose = landmarks[0];
+            
+        //     // Example measurements (customize based on your needs)
+        //     const leftShoulder = pose[11];
+        //     const rightShoulder = pose[12];
+        //     const leftHip = pose[23];
+        //     const rightHip = pose[24];
+            
+        //     const analysis = {
+        //         shoulderAlignment: calculateAngle(leftShoulder, rightShoulder),
+        //         hipAlignment: calculateAngle(leftHip, rightHip),
+        //         timestamp: new Date().toISOString()
+        //     };
+            
+        //     return analysis;
+        // }
+
+        async function analyzePose(landmarks) {
+            if (!landmarks?.length) return { error: "No landmarks detected" };
+            
+            const pose = landmarks[0];
+            return pose;
+        }
+
+        // Create pose selection UI
+        const poseSelectionDiv = document.createElement('div');
+        poseSelectionDiv.style.marginBottom = '20px';
+
+        const poseSelect = document.createElement('select');
+        poseSelect.id = 'poseSelect';
+        
+        // Add default option
+        const defaultOption = document.createElement('option');
+        defaultOption.value = '';
+        defaultOption.text = 'Select a pose reference';
+        poseSelect.appendChild(defaultOption);
+
+        // Add cobra pose option
+        const cobraOption = document.createElement('option');
+        cobraOption.value = '/imgs/poses/tree.png';
+        cobraOption.text = 'Tree';
+        poseSelect.appendChild(cobraOption);
+
+        const analyzeButton = document.createElement('button');
+        analyzeButton.textContent = 'Set as Target Pose';
+        analyzeButton.style.marginLeft = '10px';
+
+        let targetPoseLandmarks = null;
+
+        analyzeButton.onclick = async () => {
+            const selectedPosePath = poseSelect.value;
+            if (!selectedPosePath) {
+                alert('Please select a pose first');
+                return;
+            }
+
+            try {
+                const vision = await FilesetResolver.forVisionTasks(
+                    "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.0/wasm"
+                );
+                
+                const poseLandmarker = await PoseLandmarker.createFromOptions(vision, {
+                    baseOptions: {
+                        modelAssetPath: `https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/1/pose_landmarker_lite.task`,
+                        delegate: "GPU"
+                    },
+                    runningMode: "IMAGE"
+                });
+
+                const img = new Image();
+                img.src = selectedPosePath;
+                await img.decode();
+
+                const detectionResult = await poseLandmarker.detect(img);
+                targetPoseLandmarks = detectionResult.landmarks;
+                
+                // Save landmarks to JSON file
+                const landmarksJson = JSON.stringify(targetPoseLandmarks);
+                const blob = new Blob([landmarksJson], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = './imgs/poses/cobra.json';
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+                
+                
+                if (targetPoseLandmarks) {
+                    alert('Target pose set successfully!');
+                } else {
+                    alert('No pose detected in the reference image');
+                }
+            } catch (error) {
+                console.error('Error analyzing target pose:', error);
+                alert('Error setting target pose');
+            }
+        };
+
+        poseSelectionDiv.appendChild(poseSelect);
+        poseSelectionDiv.appendChild(analyzeButton);
+        document.body.insertBefore(poseSelectionDiv, document.getElementById('results'));
+
+        function calculateAngle(point1, point2) {
+            if (!point1 || !point2) return null;
+            return Math.atan2(point2.y - point1.y, point2.x - point1.x) * (180 / Math.PI);
+        }
+
+        const runTestsButton = document.createElement('button');
+        runTestsButton.textContent = 'Run Pose Tests';
+        runTestsButton.onclick = runTests;
+        document.body.insertBefore(runTestsButton, document.getElementById('results'));
+
+        async function runTests() {
+            const results = document.getElementById('results');
+            results.innerHTML = "Initializing pose detector...";
+            
+            try {
+                const vision = await FilesetResolver.forVisionTasks(
+                    "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.0/wasm"
+                );
+                
+                const poseLandmarker = await PoseLandmarker.createFromOptions(vision, {
+                    baseOptions: {
+                        modelAssetPath: `https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/1/pose_landmarker_lite.task`,
+                        delegate: "GPU"
+                    },
+                    runningMode: "IMAGE"
+                });
+
+                const testImages = [
+                    '/imgs/test/vlcsnap-2025-01-15-13h27m14s247.png',
+                    '/imgs/test/vlcsnap-2025-01-15-13h27m43s939.png',
+                    '/imgs/test/vlcsnap-2025-01-15-13h27m44s985.png',
+                    '/imgs/test/vlcsnap-2025-01-15-13h27m47s839.png',
+                    '/imgs/test/vlcsnap-2025-01-15-13h27m49s089.png',
+                    '/imgs/test/vlcsnap-2025-01-15-13h27m50s559.png',
+                    '/imgs/test/vlcsnap-2025-01-15-13h27m55s173.png',
+                    '/imgs/test/vlcsnap-2025-01-15-13h27m55s970.png',
+                    '/imgs/test/vlcsnap-2025-01-15-13h27m57s169.png',
+                    '/imgs/test/vlcsnap-2025-01-15-13h27m59s238.png',
+                    '/imgs/test/vlcsnap-2025-01-15-13h28m00s236.png',
+                    '/imgs/test/vlcsnap-2025-01-15-13h28m01s776.png',
+                    '/imgs/test/vlcsnap-2025-01-15-13h28m02s287.png',
+                    '/imgs/test/vlcsnap-2025-01-15-13h28m03s721.png',
+                    '/imgs/test/vlcsnap-2025-01-15-13h28m04s486.png',
+                    '/imgs/test/vlcsnap-2025-01-16-11h18m09s757.png',
+                    '/imgs/test/vlcsnap-2025-01-16-11h18m10s387.png',
+                    '/imgs/test/vlcsnap-2025-01-16-11h18m11s457.png',
+                    '/imgs/test/vlcsnap-2025-01-16-11h18m14s653.png',
+                    '/imgs/test/vlcsnap-2025-01-16-11h18m17s403.png',
+                    '/imgs/test/vlcsnap-2025-01-16-11h18m18s600.png',
+                    '/imgs/test/vlcsnap-2025-01-16-11h18m21s568.png',
+                    '/imgs/test/vlcsnap-2025-01-16-11h18m40s972.png',
+                    '/imgs/test/vlcsnap-2025-01-16-11h18m41s887.png',
+                    '/imgs/test/vlcsnap-2025-01-16-11h18m43s490.png',
+                    '/imgs/test/vlcsnap-2025-01-16-11h18m45s343.png',
+                    '/imgs/test/vlcsnap-2025-01-16-11h18m46s127.png',
+                    '/imgs/test/vlcsnap-2025-01-16-11h18m47s252.png'
+
+                    
+                    // '/imgs/test/test2.jpg',
+                    // Add your test image paths here
+                ];
+
+                const exercises = ['TREE', 'REVERSE_WARRIOR', 'COBRA', 'SIDE_BEND','PRAYER_SQUAT']
+                results.innerHTML = "";
+
+                for (const imagePath of testImages) {
+                    const resultDiv = document.createElement('div');
+                    try {
+                        
+                        resultDiv.innerHTML = `Processing ${imagePath}...`;
+                        results.appendChild(resultDiv);
+
+                        const img = new Image();
+                        await new Promise((resolve, reject) => {
+                            img.onload = resolve;
+                            img.onerror = reject;
+                            img.src = imagePath;
+                        });
+
+                        const canvas = document.getElementById('testCanvas');
+                        canvas.width = img.width;
+                        canvas.height = img.height;
+                        const ctx = canvas.getContext('2d');
+                        ctx.drawImage(img, 0, 0);
+
+                        const poseResults = await poseLandmarker.detect(img);
+                        // console.log(poseResults)
+                        const analysis = {
+                            poseType:"",
+                            inFrame:false
+                        }
+                        if (!isPose(poseResults.landmarks)){
+                            analysis.poseType = "NOT DETECTED"
+                            resultDiv.innerHTML = `
+                            <h3>${imagePath}</h3>
+                            <img src="${img.src}" style="max-width: 500px;"><br>
+                            <pre>${JSON.stringify(analysis, null, 2)}</pre>
+                            `;
+                            continue;
+                        } else {
+                            const inFrame = await checkInFrame(poseResults.landmarks,'TREE');// targetPoseLandmarks
+                            analysis.inFrame = inFrame
+                            if (inFrame){
+                                for (const exercise of exercises) {
+                                    const detected = await detectPoseType(poseResults.landmarks, exercise);
+                                    if (detected != "INCORRECT"){
+                                        analysis.poseType = detected
+                                        break
+                                    }
+                                }
+                            }
+                            
+                            
+
+                            
+                            
+                            // const analysis = await analyzePose(poseResults.landmarks);
+
+                            // Draw landmarks on canvas
+                            const drawingUtils = new DrawingUtils(ctx);
+                            if (poseResults.landmarks) {
+                                for (const landmark of poseResults.landmarks) {
+                                    drawingUtils.drawLandmarks(landmark);
+                                    drawingUtils.drawConnectors(landmark, PoseLandmarker.POSE_CONNECTIONS);
+                                }
+                            }
+
+                            // Create a new canvas for this image
+                            const imageCanvas = document.createElement('canvas');
+                            imageCanvas.width = img.width;
+                            imageCanvas.height = img.height;
+                            const imageCtx = imageCanvas.getContext('2d');
+                            imageCtx.drawImage(img, 0, 0);
+                            resultDiv.innerHTML = `
+                            <h3>${imagePath}</h3>
+                            <img src="${imageCanvas.toDataURL()}" style="max-width: 500px;"><br>
+                            <pre>${JSON.stringify(analysis, null, 2)}</pre>
+                            `;
+
+                        }
+
+                        
+
+                    } catch (error) {
+                        console.error(`Error processing ${imagePath}:`, error);
+                        resultDiv.innerHTML += `<br>Error: ${error.message}`;
+                    }
+                }
+
+            } catch (error) {
+                console.error("Error initializing pose detector:", error);
+                results.innerHTML += `<br>Error: ${error.message}`;
+            }
+        }
+
+        // Run tests when page loads
+        // runTests();
+    </script>
+</body>
+</html>

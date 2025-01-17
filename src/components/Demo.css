@@ -1,0 +1,59 @@
+.pose-selection {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 2rem;
+    justify-content: center;
+  }
+  
+  .pose-button {
+    padding: 0.75rem 1.5rem;
+    border: 2px solid #3498db;
+    border-radius: 8px;
+    background: white;
+    color: #3498db;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.3s ease;
+  }
+  
+  .pose-button:hover {
+    background: #3498db;
+    color: white;
+  }
+  
+  .pose-button.active {
+    background: #3498db;
+    color: white;
+  }
+  
+  .pose-display {
+    display: flex;
+    gap: 2rem;
+    align-items: flex-start;
+    justify-content: center;
+  }
+  
+  .target-pose {
+    text-align: center;
+  }
+  
+  .pose-image {
+    max-width: 300px;
+    height: auto;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  }
+  
+  .feedback-container {
+    margin-top: 1rem;
+    text-align: center;
+    padding: 1rem;
+    background: #f8f9fa;
+    border-radius: 8px;
+  }
+  
+  .feedback-text {
+    margin: 0;
+    font-size: 1.1rem;
+    color: #2c3e50;
+  }
