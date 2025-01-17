@@ -161,8 +161,9 @@ const isTreePose = (landmarks) => {
     
 
     // Check if one foot is raised to opposite thigh/knee
-    const verticalDifference = Math.abs(leftAnkle.y - rightAnkle.y);
-    const isFootRaised = verticalDifference > 0.2; // Threshold for foot height
+    const lVerticalDifference = Math.abs(leftAnkle.y - rightAnkle.y);
+    const rVerticalDifference = Math.abs(rightAnkle.y - rightAnkle.y);
+    const isFootRaised = lVerticalDifference > 0.15 || rVerticalDifference > 0.15; // Threshold for foot height difference
 
     // Check if standing leg is straight
     const standingLegAngle = calculateAngle(
@@ -273,7 +274,7 @@ const isCobraPose = (landmarks) => {
      // Check if prone
      const verticalDifference = Math.abs(leftAnkle.y - leftKnee.y);
     
-     const isProne = verticalDifference < 0.2; // Threshold for foot height
+     const isProne = verticalDifference < 0.1; // Threshold for foot height
   
     // Check if standing leg is straight
     const backAngle = calculateAngle(

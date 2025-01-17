@@ -82,6 +82,9 @@ export default function Demo() {
   const [lastPoseChange, setLastPoseChange] = useState(Date.now());
   const lastFrameCount = useRef(0);
   const [poseFeedback, setPoseFeedback] = useState('');
+  const [showGreatJob, setShowGreatJob] = useState(false);
+  const currentPoseProgress = useRef(0);
+  const isTransitioning = useRef(false);
 
   const videoHeight = "360px";
   const videoWidth = "480px";
@@ -112,13 +115,14 @@ export default function Demo() {
   useEffect(() => {
     if (!webcamRunning) return;
 
+
+
     const checkPoseChange = () => {
       const currentTime = Date.now();
       const timeElapsed = currentTime - lastPoseChange;
-      const frameIncrease = poseState.frameCnt - lastFrameCount.current;
 
-      // Change pose if 30 seconds passed or score increased by 100
-      if (timeElapsed >= 30000 || frameIncrease >= 100) {
+      // Change pose if 30 seconds passed or score increased by 100 
+      if (timeElapsed >= 30000) {
         // Get random pose that's different from current
         const availablePoses = POSE_OPTIONS.filter(pose => pose.id !== targetPose);
         const randomPose = availablePoses[Math.floor(Math.random() * availablePoses.length)];
@@ -130,7 +134,12 @@ export default function Demo() {
     return () => clearInterval(interval);
   }, [webcamRunning, targetPose, poseState.frameCnt]);
 
-
+  useEffect(() => {
+    return () => {
+      isTransitioning.current = false;
+    };
+  }, []);
+  
     // Add useEffect to monitor targetPose changes
   useEffect(() => {
     console.log('Target pose changed to:', targetPose);
@@ -168,6 +177,8 @@ export default function Demo() {
     return <div><h2>Loading</h2></div>;
   }
 
+ 
+
 
   const handlePoseSelect = (pose) => {
     console.log('Selecting new pose:', pose);
@@ -175,6 +186,41 @@ export default function Demo() {
     currentPoseRef.current = pose;
     setLastPoseChange(Date.now());
     lastFrameCount.current = poseState.frameCnt;
+    currentPoseProgress.current = 0;
+  };
+
+  const moveToNextExercise = () => {
+    const poses = ['TREE', 'REVERSE_WARRIOR', 'COBRA', 'PRAYER_SQUAT', 'SIDE_BEND'];
+    const currentIndex = poses.indexOf(currentPoseRef.current);
+    let nextIndex;
+    
+    // Keep generating random index until we get a different pose
+    do {
+      nextIndex = Math.floor(Math.random() * poses.length);
+    } while (nextIndex === currentIndex && poses.length > 1);
+    
+    const nextPose = poses[nextIndex];
+    console.log('Moving to next exercise:', nextPose);
+    
+    setTargetPose(nextPose);
+    currentPoseRef.current = nextPose;
+    setLastPoseChange(Date.now());
+    lastFrameCount.current = poseState.frameCnt;
+    currentPoseProgress.current = 0;
+    setShowGreatJob(false);
+    isTransitioning.current = false; 
+  };
+
+  const checkCompletion = () => {
+    // Don't check completion if already transitioning
+    if (currentPoseProgress.current >= 100 && !showGreatJob && !isTransitioning.current) {
+      isTransitioning.current = true; // Set flag
+      setShowGreatJob(true);
+      setTimeout(() => {
+        setShowGreatJob(false);
+        moveToNextExercise();
+      }, 700);
+    }
   };
 
 
@@ -233,8 +279,15 @@ export default function Demo() {
       // Analyze pose data
       if (results.landmarks && results.landmarks.length > 0) {
         // console.log(results)
-        analyzePose(results.landmarks, currentPoseRef.current);
-        console.log('Current frame count:', poseState.frameCnt, currentPoseRef.current);
+        const isPoseCorrect = analyzePose(results.landmarks, currentPoseRef.current);
+      
+        // Only increment progress if the pose is correct
+        if (isPoseCorrect) {
+          currentPoseProgress.current = Math.min(currentPoseProgress.current + 1, 100);
+          checkCompletion();
+          
+        }
+        
       } else {
         setPoseFeedback('No pose detected - please stand in frame');
       }
@@ -283,6 +336,16 @@ export default function Demo() {
   return (
     <div className={`min-h-screen w-full bg-gradient-to-b from-gray-900 to-gray-800 text-white py-8`}>
       <div id="demo-container" className="relative flex flex-col items-center gap-8 w-full max-w-7xl mx-auto px-4">
+      {showGreatJob && (
+          <div className="fixed inset-0 flex items-center justify-center z-50 bg-black bg-opacity-50">
+            <div className="bg-white dark:bg-gray-800 rounded-xl p-8 shadow-2xl border border-gray-200 dark:border-gray-700 text-center">
+              <h2 className="text-3xl font-bold mb-4 bg-gradient-to-r from-blue-500 to-purple-500 text-transparent bg-clip-text">
+                Great Job!
+              </h2>
+            </div>
+          </div>
+        )}
+          
           <button
             onClick={() => navigate('/')}
             className="absolute top-4 left-4 px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700"
